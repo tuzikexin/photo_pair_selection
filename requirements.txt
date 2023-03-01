@@ -1,0 +1,4 @@
+PyInstaller==4.5.1
+pandas
+matplotlib==3.6.0
+PySimpleGUI
