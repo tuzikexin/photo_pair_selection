@@ -1,8 +1,8 @@
 import PySimpleGUI as sg
 
-
 # # Define the layout of the window
 def user_select_folder():
+    background_image = None
     # Define the PySimpleGUI layout
     layout = [[sg.Text('Select a directory:')],
               [sg.InputText('/Users/kexin/Desktop/t/fundamakeovers/'),
@@ -34,13 +34,23 @@ def user_do_pair(bg_png):
 
     # Define your layout, including the image element as the first element
     w_layout = [[image],
+                
                 [sg.Text("Enter the pair photo, negative number indicate that"
                          " paired photo as raw photo(save to train_a)"),
-                 sg.InputText()],
-                [sg.Button("Pair Submit"),
-                 sg.Button("move to next one"),
-                 sg.Button("To Other folder")],
+                 sg.InputText(),
+                 sg.Button("Pair Submit")],
+                
+                [sg.Button("move to next one"),
+                 sg.Button("Check folder"),
+                 sg.Button("First Photo as")
+                 ],
+
+                [sg.Column(
+                    [[sg.Button('Open all folders'),
+                      sg.Button("To Other folder")]],
+                    justification='left', element_justification='top')]
                 ]
+
     # Create the window using your custom layout
     window = sg.Window("Input Box Example", w_layout, finalize=True)
     # Run the event loop to wait for user interaction
@@ -61,7 +71,21 @@ def user_do_pair(bg_png):
                     break
             except ValueError:
                 sg.popup('Please enter a number small than 16.')
+                
+        elif user_event =='First Photo as':
+            try:
+                select_nr = int(value[1])
+                if select_nr > 16 or select_nr < 1:
+                    sg.popup('Please enter a number between 1 and 16.')
+                else:
+                    break
+            except ValueError:
+                sg.popup('Please enter a number between 1 and 16.')
         
+        elif user_event == "Check folder":
+            break
+        elif user_event == "Open all folders":
+            break
         elif user_event == "move to next one":
             break
         elif user_event == "To Other folder":
@@ -83,5 +107,4 @@ def finish_windows():
         event, values = window.read()
         if event == sg.WIN_CLOSED or event == 'Byebye':
             break
-    
     window.close()

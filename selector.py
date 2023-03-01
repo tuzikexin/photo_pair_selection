@@ -1,6 +1,7 @@
 import os
 import random
 import shutil
+from subprocess import call
 
 import matplotlib.pyplot as plt
 from PIL import Image
@@ -25,18 +26,21 @@ class PairsPhoto:
         # get the root folder
         self.photos_folder = user_select_folder()
         
-        self.train_a_path = os.path.join(self.photos_folder, "trainA")
+        self.train_a_path = os.path.join(os.getcwd(), 'datasets', 'trainA')
         if not os.path.exists(self.train_a_path):
             os.makedirs(self.train_a_path)
-        self.train_b_path = os.path.join(self.photos_folder, "trainB")
+        self.train_b_path = os.path.join(os.getcwd(), 'datasets', 'trainB')
         if not os.path.exists(self.train_b_path):
             os.makedirs(self.train_b_path)
             
         self.train_a_start_index = len(
-            [f for f in os.listdir(self.train_a_path)])
+            [f for f in os.listdir(self.train_a_path) if f.lower().endswith(
+                ('.png', '.jpg', '.jpeg', '.gif'))])
         self.train_b_start_index = len(
-            [f for f in os.listdir(self.train_b_path)])
+            [f for f in os.listdir(self.train_b_path) if f.lower().endswith(
+                ('.png', '.jpg', '.jpeg', '.gif'))])
         
+        assert self.train_a_start_index == self.train_b_start_index
         # Get a list of all the photo file names in the folder
         photo_files = [f for f in os.listdir(self.photos_folder) if
                        os.path.isfile(
@@ -82,6 +86,8 @@ class PairsPhoto:
             photo_list = [os.path.join(photo_p, f) for f in
                           os.listdir(photo_p) if
                           os.path.isfile(os.path.join(photo_p, f))]
+            photo_list = [f for f in photo_list if f.lower().endswith(
+                ('.png', '.jpg', '.jpeg', '.gif'))]
             if len(photo_list) <= 1:
                 photo_list = None
                 self.skip_folder.append(photo_p)
@@ -92,19 +98,27 @@ class PairsPhoto:
         self.update_skip_folder_log()
         return photo_p, photo_list
     
-    def generate_bg_png(self, photo_list):
+    def generate_bg_png(self, photo_list, first_photo_as=None):
         # Load and display the first photo
-        first_photo_path = random.choice(photo_list)
+        if first_photo_as:
+            first_photo_path = first_photo_as
+        else:
+            first_photo_path = random.choice(photo_list)
         first_photo_image = Image.open(first_photo_path)
         # select pair candidate for the first img
         candidates = [f for f in photo_list if f != first_photo_path]
         # Create the figure and gridspec
         fig = plt.figure(constrained_layout=True, figsize=(14, 7))
-        gs = fig.add_gridspec(5, 5)
+        gs = fig.add_gridspec(5, 5,
+                              wspace=0.01, hspace=0.01,
+                              # width_ratios=[1, 1, 1, 50, 50],
+                              # height_ratios=[50,50,50, 150, 150],
+                              )
         # Add the large photo on the left
         ax1 = fig.add_subplot(gs[:3, :3])
         ax1.imshow(first_photo_image)
-        ax1.set_title('Select the pair photo for the right side')
+        ax1.set_title(f'Select the pair photo for the right side\n'
+                      f'{first_photo_path}')
         # Add the subplot of small photos on the right
         candidate_index = 0
         sub_ax = []
@@ -156,6 +170,8 @@ class PairsPhoto:
         photo_path, photo_list = self.pick_one_folder()
         continue_pair = True
         user_event = ''
+        select_nr = None
+        first_photo_as = None
         while photo_list is not None and continue_pair:
             
             if user_event == "To Other folder" or len(photo_list) < 2:
@@ -163,12 +179,26 @@ class PairsPhoto:
                 self.update_skip_folder_log()
                 # pick up a new folder
                 photo_path, photo_list = self.pick_one_folder()
-            
+                
+            elif user_event == "Check folder":
+                call(["open", photo_path])
+
+            elif user_event == "Open all folders":
+                for f in [self.train_a_path, self.train_b_path, photo_path]:
+                    call(["open", f])
+                
             candidates, first_photo_path = self.generate_bg_png(
-                photo_list)
+                photo_list, first_photo_as)
+            
             continue_pair, user_event, select_nr = user_do_pair(
                 os.path.join(self.photos_folder, "tmp.png"))
-            
+
+            if user_event == 'First Photo as':
+                first_photo_as = candidates[int(select_nr)-1]
+                select_nr = None
+            else:
+                first_photo_as = None
+                
             if select_nr is not None:
                 photo_list = self.move_paired_photo(
                     first_photo_path, candidates, select_nr)
